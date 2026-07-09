@@ -2,6 +2,7 @@ package singleConn
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,15 +14,17 @@ import (
 )
 
 type RabbitMqSingleConnectionHandler struct {
-	Connection           *amqp.Connection
-	rabbitConnString     string
-	breaker              *breaker.CircuitBreaker
-	log                  *logger.Logger
-	channelHandler       *channel.ChannelHandler
-	options              ConnectionOptions
-	shutDownInitiated    bool
-	onReconnectCallbacks []func() error
-	mu                   sync.Mutex
+	Connection              *amqp.Connection
+	rabbitConnString        string
+	breaker                *breaker.CircuitBreaker
+	log                    *logger.Logger
+	channelHandler         *channel.ChannelHandler
+	options                ConnectionOptions
+	shutDownInitiated      bool
+	reconnectAttempts       int
+	onReconnectCallbacks   []func() error
+	onPermanentFailureCb   func(error) error
+	mu                     sync.Mutex
 }
 
 func DefaultOptions() ConnectionOptions {
@@ -88,8 +91,25 @@ func (rabbit *RabbitMqSingleConnectionHandler) handleDisconnect(ctx context.Cont
 }
 
 func (rabbit *RabbitMqSingleConnectionHandler) reconnect(ctx context.Context) {
+	rabbit.mu.Lock()
+	rabbit.reconnectAttempts++
+	attempt := rabbit.reconnectAttempts
+	maxAttempts := rabbit.options.MaxReconnectAttempts
+	rabbit.mu.Unlock()
+
+	if maxAttempts > 0 && attempt > maxAttempts {
+		err := fmt.Errorf("max reconnect attempts (%d) exhausted", maxAttempts)
+		rabbit.log.Error("permanent failure", "error", err)
+		if rabbit.onPermanentFailureCb != nil {
+			if cbErr := rabbit.onPermanentFailureCb(err); cbErr != nil {
+				rabbit.log.Error("permanent failure callback error", "error", cbErr)
+			}
+		}
+		return
+	}
+
 	if rabbit.breaker.IsOpen() {
-		rabbit.log.Warn("circuit open — pausing reconnect")
+		rabbit.log.Warn("circuit open — pausing reconnect", "attempt", attempt)
 		rabbit.breaker.Probe(ctx, func() {
 			rabbit.reconnect(ctx)
 		})
@@ -97,7 +117,7 @@ func (rabbit *RabbitMqSingleConnectionHandler) reconnect(ctx context.Context) {
 	}
 
 	delay := rabbit.breaker.GetBackoffDelay(30 * time.Second)
-	rabbit.log.Info("attempting reconnect", "delay", delay)
+	rabbit.log.Info("attempting reconnect", "attempt", attempt, "delay", delay)
 
 	select {
 	case <-time.After(delay):
@@ -106,11 +126,15 @@ func (rabbit *RabbitMqSingleConnectionHandler) reconnect(ctx context.Context) {
 	}
 
 	if err := rabbit.Connect(ctx); err != nil {
-		rabbit.log.Error("reconnect failed", "error", err)
+		rabbit.log.Error("reconnect failed", "error", err, "attempt", attempt)
 		rabbit.breaker.RecordFailure()
 		rabbit.reconnect(ctx)
 		return
 	}
+
+	rabbit.mu.Lock()
+	rabbit.reconnectAttempts = 0
+	rabbit.mu.Unlock()
 
 	rabbit.breaker.RecordSuccess()
 	rabbit.log.Info("reconnected successfully")
@@ -130,6 +154,12 @@ func (rabbit *RabbitMqSingleConnectionHandler) OnReconnect(cb func() error) {
 	rabbit.mu.Lock()
 	defer rabbit.mu.Unlock()
 	rabbit.onReconnectCallbacks = append(rabbit.onReconnectCallbacks, cb)
+}
+
+func (rabbit *RabbitMqSingleConnectionHandler) OnPermanentFailure(cb func(error) error) {
+	rabbit.mu.Lock()
+	defer rabbit.mu.Unlock()
+	rabbit.onPermanentFailureCb = cb
 }
 
 func (rabbit *RabbitMqSingleConnectionHandler) Shutdown() error {
