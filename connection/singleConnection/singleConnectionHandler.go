@@ -24,7 +24,7 @@ type RabbitMqSingleConnectionHandler struct {
 	reconnectAttempts       int
 	onReconnectCallbacks   []func() error
 	onPermanentFailureCb   func(error) error
-	mu                     sync.Mutex
+	mu                     sync.RWMutex
 }
 
 func DefaultOptions() ConnectionOptions {
@@ -35,12 +35,29 @@ func DefaultOptions() ConnectionOptions {
 	}
 }
 
-func NewRabbitMqSingleConnectionHandler(connString string, opts ConnectionOptions, log *logger.Logger) *RabbitMqSingleConnectionHandler {
+type SingleConnectionConfig struct {
+	ConnString string
+	Options    ConnectionOptions
+	Logger     *logger.Logger
+}
+
+func NewRabbitMqSingleConnectionHandler(cfg SingleConnectionConfig) *RabbitMqSingleConnectionHandler {
+	log := cfg.Logger
 	if log == nil {
 		log = logger.New(logger.Production)
 	}
+	opts := cfg.Options
+	if opts.MaxReconnectAttempts < 0 {
+		opts.MaxReconnectAttempts = 10
+	}
+	if opts.ReconnectInterval <= 0 {
+		opts.ReconnectInterval = 5 * time.Second
+	}
+	if opts.AmqpConfig.Heartbeat <= 0 {
+		opts.AmqpConfig.Heartbeat = 60 * time.Second
+	}
 	return &RabbitMqSingleConnectionHandler{
-		rabbitConnString: connString,
+		rabbitConnString: cfg.ConnString,
 		options:         opts,
 		log:             log,
 		channelHandler:  channel.NewChannelHandler(log),
@@ -97,7 +114,7 @@ func (rabbit *RabbitMqSingleConnectionHandler) reconnect(ctx context.Context) {
 	maxAttempts := rabbit.options.MaxReconnectAttempts
 	rabbit.mu.Unlock()
 
-	if maxAttempts > 0 && attempt > maxAttempts {
+	if attempt > maxAttempts {
 		err := fmt.Errorf("max reconnect attempts (%d) exhausted", maxAttempts)
 		rabbit.log.Error("permanent failure", "error", err)
 		if rabbit.onPermanentFailureCb != nil {
@@ -147,7 +164,10 @@ func (rabbit *RabbitMqSingleConnectionHandler) reconnect(ctx context.Context) {
 }
 
 func (rabbit *RabbitMqSingleConnectionHandler) GetChannel(ctx context.Context, onClose channel.OnChannelClose) (*amqp.Channel, error) {
-	return rabbit.channelHandler.GetChannel(ctx, rabbit.Connection, onClose)
+	rabbit.mu.RLock()
+	conn := rabbit.Connection
+	rabbit.mu.RUnlock()
+	return rabbit.channelHandler.GetChannel(ctx, conn, onClose)
 }
 
 func (rabbit *RabbitMqSingleConnectionHandler) OnReconnect(cb func() error) {
@@ -160,6 +180,10 @@ func (rabbit *RabbitMqSingleConnectionHandler) OnPermanentFailure(cb func(error)
 	rabbit.mu.Lock()
 	defer rabbit.mu.Unlock()
 	rabbit.onPermanentFailureCb = cb
+}
+
+func (rabbit *RabbitMqSingleConnectionHandler) GetLogger() *logger.Logger {
+	return rabbit.log
 }
 
 func (rabbit *RabbitMqSingleConnectionHandler) Shutdown() error {
