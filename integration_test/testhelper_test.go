@@ -39,7 +39,10 @@ func startRabbitMQ(t *testing.T) (string, func()) {
 
 func setupConn(t *testing.T, connStr string) *singleConn.RabbitMqSingleConnectionHandler {
 	t.Helper()
-	conn := singleConn.NewRabbitMqSingleConnectionHandler(connStr, singleConn.DefaultOptions(), nil)
+	conn := singleConn.NewRabbitMqSingleConnectionHandler(singleConn.SingleConnectionConfig{
+		ConnString: connStr,
+		Options:    singleConn.DefaultOptions(),
+	})
 	conn.AddBreaker(breaker.CircuitBreakerOptions{})
 	if err := conn.Connect(context.Background()); err != nil {
 		t.Fatalf("connect failed: %v", err)
@@ -50,7 +53,7 @@ func setupConn(t *testing.T, connStr string) *singleConn.RabbitMqSingleConnectio
 func setupExchangeAndQueue(t *testing.T, conn helpers.IRabbitConnection, exName, qName, bindingKey string) {
 	t.Helper()
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange(exName, exchange.Topic, exchange.RabbitExchangeOptions{Durable: true})
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{Name: exName, Type: exchange.Topic, Durable: true})
 	if err := ex.CreateExchange(ctx, conn); err != nil {
 		t.Fatalf("create exchange failed: %v", err)
 	}
@@ -68,8 +71,8 @@ func publishMessages(t *testing.T, conn helpers.IRabbitConnection, exName, routi
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	pub := producer.NewProducer(exName, routingKey)
-	if err := pub.GetChannel(ctx, conn); err != nil {
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: exName, RoutingKey: routingKey})
+	if err := pub.GetChannel(ctx, conn, nil); err != nil {
 		t.Fatalf("producer get channel failed: %v", err)
 	}
 
