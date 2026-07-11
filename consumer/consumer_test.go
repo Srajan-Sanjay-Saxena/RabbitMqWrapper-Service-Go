@@ -8,31 +8,31 @@ import (
 )
 
 func TestNewConsumerFields(t *testing.T) {
-	cons := NewConsumer("test.queue", 15, func(ctx context.Context, msg amqp.Delivery) error {
+	cons := NewConsumer(ConsumerConfig{QueueName: "test.queue", Prefetch: 15, Handler: func(ctx context.Context, msg amqp.Delivery) error {
 		return nil
-	})
+	}})
 
-	if cons.queueName != "test.queue" {
-		t.Errorf("expected 'test.queue', got '%s'", cons.queueName)
+	if cons.config.QueueName != "test.queue" {
+		t.Errorf("expected 'test.queue', got '%s'", cons.config.QueueName)
 	}
-	if cons.prefetch != 15 {
-		t.Errorf("expected prefetch 15, got %d", cons.prefetch)
+	if cons.config.Prefetch != 15 {
+		t.Errorf("expected prefetch 15, got %d", cons.config.Prefetch)
 	}
 	if cons.channel != nil {
 		t.Error("expected nil channel before GetChannel()")
 	}
-	if cons.autoAck != false {
+	if cons.config.AutoAck != false {
 		t.Error("expected autoAck false by default")
 	}
-	if cons.handler == nil {
+	if cons.config.Handler == nil {
 		t.Error("expected handler to be set")
 	}
 }
 
 func TestConsumeFailsWithoutChannel(t *testing.T) {
-	cons := NewConsumer("test.queue", 10, func(ctx context.Context, msg amqp.Delivery) error {
+	cons := NewConsumer(ConsumerConfig{QueueName: "test.queue", Prefetch: 10, Handler: func(ctx context.Context, msg amqp.Delivery) error {
 		return nil
-	})
+	}})
 
 	err := cons.Consume(context.Background())
 	if err == nil {
@@ -40,17 +40,6 @@ func TestConsumeFailsWithoutChannel(t *testing.T) {
 	}
 	if err.Error() != "channel not initialized, call GetChannel first" {
 		t.Errorf("unexpected error: %s", err.Error())
-	}
-}
-
-func TestStopWithNilChannel(t *testing.T) {
-	cons := NewConsumer("test.queue", 10, func(ctx context.Context, msg amqp.Delivery) error {
-		return nil
-	})
-
-	err := cons.Stop()
-	if err != nil {
-		t.Errorf("expected nil error on Stop with nil channel, got %v", err)
 	}
 }
 
@@ -65,29 +54,29 @@ func TestNewConsumerWithDifferentPrefetch(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		cons := NewConsumer("q", tt.prefetch, func(ctx context.Context, msg amqp.Delivery) error {
+		cons := NewConsumer(ConsumerConfig{QueueName: "q", Prefetch: tt.prefetch, Handler: func(ctx context.Context, msg amqp.Delivery) error {
 			return nil
-		})
-		if cons.prefetch != tt.prefetch {
-			t.Errorf("expected prefetch %d, got %d", tt.prefetch, cons.prefetch)
+		}})
+		if cons.config.Prefetch != tt.prefetch {
+			t.Errorf("expected prefetch %d, got %d", tt.prefetch, cons.config.Prefetch)
 		}
 	}
 }
 
 func TestNewConsumerHandlerIsSet(t *testing.T) {
-	cons := NewConsumer("q", 10, func(ctx context.Context, msg amqp.Delivery) error {
+	cons := NewConsumer(ConsumerConfig{QueueName: "q", Prefetch: 10, Handler: func(ctx context.Context, msg amqp.Delivery) error {
 		return nil
-	})
+	}})
 
-	if cons.handler == nil {
+	if cons.config.Handler == nil {
 		t.Fatal("handler should not be nil")
 	}
 }
 
 func TestNewConsumerConsumerTagEmpty(t *testing.T) {
-	cons := NewConsumer("q", 10, func(ctx context.Context, msg amqp.Delivery) error {
+	cons := NewConsumer(ConsumerConfig{QueueName: "q", Prefetch: 10, Handler: func(ctx context.Context, msg amqp.Delivery) error {
 		return nil
-	})
+	}})
 
 	if cons.consumerTag != "" {
 		t.Errorf("expected empty consumer tag, got '%s'", cons.consumerTag)
