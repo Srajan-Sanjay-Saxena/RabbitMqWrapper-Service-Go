@@ -4,6 +4,11 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
+type ProducerConfig struct {
+	ExchangeName string
+	RoutingKey   string
+}
+
 // ChannelMode controls whether the producer channel operates in confirmed or unsafe mode.
 type ChannelMode int
 
