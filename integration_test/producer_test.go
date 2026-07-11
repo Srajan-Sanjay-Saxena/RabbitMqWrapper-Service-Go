@@ -22,8 +22,8 @@ func TestProducerPublishWithConfirm(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pub := producer.NewProducer("prod.test.ex", "prod.test.event")
-	if err := pub.GetChannel(ctx, conn); err != nil {
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: "prod.test.ex", RoutingKey: "prod.test.event"})
+	if err := pub.GetChannel(ctx, conn, nil); err != nil {
 		t.Fatalf("get channel failed: %v", err)
 	}
 
@@ -47,8 +47,8 @@ func TestProducerPublishWithTTL(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pub := producer.NewProducer("ttl.ex", "ttl.msg")
-	if err := pub.GetChannel(ctx, conn); err != nil {
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: "ttl.ex", RoutingKey: "ttl.msg"})
+	if err := pub.GetChannel(ctx, conn, nil); err != nil {
 		t.Fatalf("get channel failed: %v", err)
 	}
 
@@ -73,8 +73,8 @@ func TestProducerPublishWithHeaders(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pub := producer.NewProducer("headers.ex", "headers.msg")
-	if err := pub.GetChannel(ctx, conn); err != nil {
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: "headers.ex", RoutingKey: "headers.msg"})
+	if err := pub.GetChannel(ctx, conn, nil); err != nil {
 		t.Fatalf("get channel failed: %v", err)
 	}
 
@@ -101,13 +101,13 @@ func TestProducerPublishUnroutableReturnsError(t *testing.T) {
 	defer cancel()
 
 	// Create exchange but NO queue bound to this routing key
-	ex := exchange.NewRabbitExchange("unroutable.ex", exchange.Topic, exchange.RabbitExchangeOptions{Durable: true})
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{Name: "unroutable.ex", Type: exchange.Topic, Durable: true})
 	if err := ex.CreateExchange(ctx, conn); err != nil {
 		t.Fatalf("create exchange failed: %v", err)
 	}
 
-	pub := producer.NewProducer("unroutable.ex", "no.queue.bound.here")
-	if err := pub.GetChannel(ctx, conn); err != nil {
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: "unroutable.ex", RoutingKey: "no.queue.bound.here"})
+	if err := pub.GetChannel(ctx, conn, nil); err != nil {
 		t.Fatalf("get channel failed: %v", err)
 	}
 
@@ -131,8 +131,8 @@ func TestProducerMultiplePublishes(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	pub := producer.NewProducer("multi.ex", "multi.msg")
-	if err := pub.GetChannel(ctx, conn); err != nil {
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: "multi.ex", RoutingKey: "multi.msg"})
+	if err := pub.GetChannel(ctx, conn, nil); err != nil {
 		t.Fatalf("get channel failed: %v", err)
 	}
 
@@ -159,8 +159,8 @@ func TestProducerContextCancelled(t *testing.T) {
 	defer cancel()
 	time.Sleep(1 * time.Millisecond) // ensure context is expired
 
-	pub := producer.NewProducer("ctx.cancel.ex", "ctx.cancel.key")
-	pub.GetChannel(ctx, conn)
+	pub := producer.NewProducer(producer.ProducerConfig{ExchangeName: "ctx.cancel.ex", RoutingKey: "ctx.cancel.key"})
+	pub.GetChannel(ctx, conn, nil)
 
 	err := pub.Publish(ctx, []byte(`{"cancelled": true}`), producer.RabbitMqPublisherConfig{})
 	if err == nil {
