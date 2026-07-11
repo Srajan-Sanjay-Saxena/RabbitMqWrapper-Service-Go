@@ -29,7 +29,10 @@ func TestNewRabbitMqSingleConnectionHandler(t *testing.T) {
 		MaxReconnectAttempts: 5,
 	}
 
-	conn := NewRabbitMqSingleConnectionHandler("amqp://guest:guest@localhost:5672/", opts, nil)
+	conn := NewRabbitMqSingleConnectionHandler(SingleConnectionConfig{
+		ConnString: "amqp://guest:guest@localhost:5672/",
+		Options:    opts,
+	})
 
 	if conn.rabbitConnString != "amqp://guest:guest@localhost:5672/" {
 		t.Errorf("unexpected conn string: %s", conn.rabbitConnString)
@@ -49,8 +52,10 @@ func TestNewRabbitMqSingleConnectionHandler(t *testing.T) {
 }
 
 func TestConnectFailsWithBadURL(t *testing.T) {
-	opts := DefaultOptions()
-	conn := NewRabbitMqSingleConnectionHandler("amqp://invalid:invalid@localhost:9999/", opts, nil)
+	conn := NewRabbitMqSingleConnectionHandler(SingleConnectionConfig{
+		ConnString: "amqp://invalid:invalid@localhost:9999/",
+		Options:    DefaultOptions(),
+	})
 
 	err := conn.Connect(context.Background())
 	if err == nil {
@@ -60,8 +65,10 @@ func TestConnectFailsWithBadURL(t *testing.T) {
 }
 
 func TestShutdownWithNilConnection(t *testing.T) {
-	opts := DefaultOptions()
-	conn := NewRabbitMqSingleConnectionHandler("amqp://guest:guest@localhost:5672/", opts, nil)
+	conn := NewRabbitMqSingleConnectionHandler(SingleConnectionConfig{
+		ConnString: "amqp://guest:guest@localhost:5672/",
+		Options:    DefaultOptions(),
+	})
 
 	err := conn.Shutdown()
 	if err != nil {
@@ -73,8 +80,10 @@ func TestShutdownWithNilConnection(t *testing.T) {
 }
 
 func TestShutdownSetsFlag(t *testing.T) {
-	opts := DefaultOptions()
-	conn := NewRabbitMqSingleConnectionHandler("amqp://guest:guest@localhost:5672/", opts, nil)
+	conn := NewRabbitMqSingleConnectionHandler(SingleConnectionConfig{
+		ConnString: "amqp://guest:guest@localhost:5672/",
+		Options:    DefaultOptions(),
+	})
 
 	conn.Shutdown()
 
