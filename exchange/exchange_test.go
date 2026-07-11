@@ -25,55 +25,52 @@ func TestExchangeTopicString(t *testing.T) {
 }
 
 func TestNewRabbitExchange(t *testing.T) {
-	opts := RabbitExchangeOptions{
-		Durable:    true,
-		AutoDelete: false,
-		Internal:   false,
-		NoWait:     false,
-	}
+	ex := NewRabbitExchange(RabbitExchangeConfig{
+		Name:    "test.exchange",
+		Type:    Topic,
+		Durable: true,
+	})
 
-	ex := NewRabbitExchange("test.exchange", Topic, opts)
-
-	if ex.ExchangeName != "test.exchange" {
-		t.Errorf("expected 'test.exchange', got '%s'", ex.ExchangeName)
+	if ex.config.Name != "test.exchange" {
+		t.Errorf("expected 'test.exchange', got '%s'", ex.config.Name)
 	}
-	if ex.exchangeType != Topic {
-		t.Errorf("expected Topic, got %v", ex.exchangeType)
+	if ex.config.Type != Topic {
+		t.Errorf("expected Topic, got %v", ex.config.Type)
 	}
-	if !ex.exchangeOptions.Durable {
+	if !ex.config.Durable {
 		t.Error("expected Durable true")
 	}
 }
 
 func TestNewRabbitExchangeDirectType(t *testing.T) {
-	ex := NewRabbitExchange("direct.ex", Direct, RabbitExchangeOptions{Durable: true})
+	ex := NewRabbitExchange(RabbitExchangeConfig{Name: "direct.ex", Type: Direct, Durable: true})
 
-	if ex.exchangeType != Direct {
-		t.Errorf("expected Direct, got %v", ex.exchangeType)
+	if ex.config.Type != Direct {
+		t.Errorf("expected Direct, got %v", ex.config.Type)
 	}
-	if ex.exchangeType.String() != "direct" {
-		t.Errorf("expected 'direct', got '%s'", ex.exchangeType.String())
+	if ex.config.Type.String() != "direct" {
+		t.Errorf("expected 'direct', got '%s'", ex.config.Type.String())
 	}
 }
 
 func TestNewRabbitExchangeFanoutType(t *testing.T) {
-	ex := NewRabbitExchange("fanout.ex", Fanout, RabbitExchangeOptions{})
+	ex := NewRabbitExchange(RabbitExchangeConfig{Name: "fanout.ex", Type: Fanout})
 
-	if ex.exchangeType != Fanout {
-		t.Errorf("expected Fanout, got %v", ex.exchangeType)
+	if ex.config.Type != Fanout {
+		t.Errorf("expected Fanout, got %v", ex.config.Type)
 	}
-	if ex.exchangeType.String() != "fanout" {
-		t.Errorf("expected 'fanout', got '%s'", ex.exchangeType.String())
+	if ex.config.Type.String() != "fanout" {
+		t.Errorf("expected 'fanout', got '%s'", ex.config.Type.String())
 	}
 }
 
 func TestNewRabbitExchangeHeadersType(t *testing.T) {
-	ex := NewRabbitExchange("headers.ex", Headers, RabbitExchangeOptions{Internal: true})
+	ex := NewRabbitExchange(RabbitExchangeConfig{Name: "headers.ex", Type: Headers, Internal: true})
 
-	if ex.exchangeType != Headers {
-		t.Errorf("expected Headers, got %v", ex.exchangeType)
+	if ex.config.Type != Headers {
+		t.Errorf("expected Headers, got %v", ex.config.Type)
 	}
-	if !ex.exchangeOptions.Internal {
+	if !ex.config.Internal {
 		t.Error("expected Internal true")
 	}
 }
