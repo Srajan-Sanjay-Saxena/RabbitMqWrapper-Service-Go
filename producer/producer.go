@@ -3,50 +3,60 @@ package producer
 import (
 	"context"
 	"errors"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
 	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/helpers"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/logger"
 )
 
 type RabbitMqProducer struct {
-	exchangeName  string
-	routingKey    string
-	channel       *amqp.Channel
-	confirmCh     chan amqp.Confirmation
-	returnCh      chan amqp.Return
-	mode          ChannelMode
-	fireAndForget bool
+	config    ProducerConfig
+	channel   *amqp.Channel
+	confirmCh chan amqp.Confirmation
+	returnCh  chan amqp.Return
+	conn      helpers.IRabbitConnection
+	opts      *ProducerChannelOptions
+	ctx       context.Context
+	log       *logger.Logger
 }
 
-func NewProducer(exchangeName, routingKey string) *RabbitMqProducer {
-	return &RabbitMqProducer{
-		exchangeName: exchangeName,
-		routingKey:   routingKey,
-	}
+func NewProducer(cfg ProducerConfig) *RabbitMqProducer {
+	return &RabbitMqProducer{config: cfg}
 }
 
-func (rProd *RabbitMqProducer) GetChannel(ctx context.Context, conn helpers.IRabbitConnection, opts ...ProducerChannelOptions) error {
-	ch, err := conn.GetChannel(ctx, func(_ *amqp.Connection) {
+func (rProd *RabbitMqProducer) GetChannel(ctx context.Context, conn helpers.IRabbitConnection, opts *ProducerChannelOptions) error {
+	rProd.conn = conn
+	rProd.ctx = ctx
+	rProd.opts = opts
+	rProd.log = conn.GetLogger()
+
+	return rProd.acquireChannel()
+}
+
+func (rProd *RabbitMqProducer) acquireChannel() error {
+	ch, err := rProd.conn.GetChannel(rProd.ctx, func(_ *amqp.Connection) {
 		rProd.channel = nil
 		rProd.confirmCh = nil
 		rProd.returnCh = nil
+
+		go rProd.reacquire()
 	})
 	if err != nil {
 		return err
 	}
 
 	mode := Confirmed
-	if len(opts) > 0 {
-		mode = opts[0].Mode
+	fireAndForget := false
+	if rProd.opts != nil {
+		mode = rProd.opts.Mode
+		if mode == Unsafe {
+			fireAndForget = rProd.opts.UnsafeOptions.FireAndForget
+		}
 	}
-	rProd.mode = mode
 
-	if mode == Unsafe && len(opts) > 0 {
-		rProd.fireAndForget = opts[0].UnsafeOptions.FireAndForget
-	}
-
-	if mode == Confirmed || (mode == Unsafe && !rProd.fireAndForget) {
+	if mode == Confirmed || (mode == Unsafe && !fireAndForget) {
 		if err := ch.Confirm(false); err != nil {
 			ch.Close()
 			return err
@@ -59,8 +69,20 @@ func (rProd *RabbitMqProducer) GetChannel(ctx context.Context, conn helpers.IRab
 	return nil
 }
 
-func (rProd *RabbitMqProducer) IsChannelValid() bool {
-	return rProd.channel != nil
+func (rProd *RabbitMqProducer) reacquire() {
+	for {
+		if err := rProd.acquireChannel(); err != nil {
+			rProd.log.Error("producer channel reacquire failed", "error", err)
+			select {
+			case <-time.After(2 * time.Second):
+			case <-rProd.ctx.Done():
+				return
+			}
+			continue
+		}
+		rProd.log.Info("producer channel reacquired")
+		return
+	}
 }
 
 func (rProd *RabbitMqProducer) Publish(ctx context.Context, body []byte, cfg RabbitMqPublisherConfig) error {
@@ -68,15 +90,24 @@ func (rProd *RabbitMqProducer) Publish(ctx context.Context, body []byte, cfg Rab
 		return errors.New("channel not initialized or closed, call GetChannel")
 	}
 
+	mode := Confirmed
+	fireAndForget := false
+	if rProd.opts != nil {
+		mode = rProd.opts.Mode
+		if mode == Unsafe {
+			fireAndForget = rProd.opts.UnsafeOptions.FireAndForget
+		}
+	}
+
 	msg := rProd.buildMessage(cfg)
 	msg.Body = body
 
-	err := rProd.channel.PublishWithContext(ctx, rProd.exchangeName, rProd.routingKey, rProd.mode == Confirmed, false, msg)
+	err := rProd.channel.PublishWithContext(ctx, rProd.config.ExchangeName, rProd.config.RoutingKey, mode == Confirmed, false, msg)
 	if err != nil {
 		return err
 	}
 
-	if rProd.mode == Unsafe && rProd.fireAndForget {
+	if mode == Unsafe && fireAndForget {
 		return nil
 	}
 
