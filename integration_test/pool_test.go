@@ -12,7 +12,12 @@ func TestPoolConnect(t *testing.T) {
 	connStr, cleanup := startRabbitMQ(t)
 	defer cleanup()
 
-	pool := connPool.NewConnectionPool(connStr, connPool.PoolOptions{ConnSize: 3, ChanPerConn: 5}, singleConn.DefaultOptions(), nil)
+	pool := connPool.NewConnectionPool(connPool.PoolConfig{
+		ConnString:  connStr,
+		ConnSize:    3,
+		ChanPerConn: 5,
+		ConnOptions: singleConn.DefaultOptions(),
+	})
 	if err := pool.Connect(context.Background()); err != nil {
 		t.Fatalf("pool connect failed: %v", err)
 	}
@@ -23,7 +28,12 @@ func TestPoolGetChannel(t *testing.T) {
 	connStr, cleanup := startRabbitMQ(t)
 	defer cleanup()
 
-	pool := connPool.NewConnectionPool(connStr, connPool.PoolOptions{ConnSize: 3, ChanPerConn: 5}, singleConn.DefaultOptions(), nil)
+	pool := connPool.NewConnectionPool(connPool.PoolConfig{
+		ConnString:  connStr,
+		ConnSize:    3,
+		ChanPerConn: 5,
+		ConnOptions: singleConn.DefaultOptions(),
+	})
 	if err := pool.Connect(context.Background()); err != nil {
 		t.Fatalf("pool connect failed: %v", err)
 	}
@@ -42,7 +52,12 @@ func TestPoolExhaustion(t *testing.T) {
 	connStr, cleanup := startRabbitMQ(t)
 	defer cleanup()
 
-	pool := connPool.NewConnectionPool(connStr, connPool.PoolOptions{ConnSize: 1, ChanPerConn: 2}, singleConn.DefaultOptions(), nil)
+	pool := connPool.NewConnectionPool(connPool.PoolConfig{
+		ConnString:  connStr,
+		ConnSize:    1,
+		ChanPerConn: 2,
+		ConnOptions: singleConn.DefaultOptions(),
+	})
 	if err := pool.Connect(context.Background()); err != nil {
 		t.Fatalf("pool connect failed: %v", err)
 	}
@@ -72,7 +87,12 @@ func TestPoolShutdown(t *testing.T) {
 	connStr, cleanup := startRabbitMQ(t)
 	defer cleanup()
 
-	pool := connPool.NewConnectionPool(connStr, connPool.PoolOptions{ConnSize: 2, ChanPerConn: 3}, singleConn.DefaultOptions(), nil)
+	pool := connPool.NewConnectionPool(connPool.PoolConfig{
+		ConnString:  connStr,
+		ConnSize:    2,
+		ChanPerConn: 3,
+		ConnOptions: singleConn.DefaultOptions(),
+	})
 	if err := pool.Connect(context.Background()); err != nil {
 		t.Fatalf("pool connect failed: %v", err)
 	}
