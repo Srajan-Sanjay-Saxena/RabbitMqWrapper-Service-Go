@@ -15,7 +15,9 @@ func TestCreateTopicExchange(t *testing.T) {
 	defer conn.Shutdown()
 
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange("test.topic.exchange", exchange.Topic, exchange.RabbitExchangeOptions{
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{
+		Name:    "test.topic.exchange",
+		Type:    exchange.Topic,
 		Durable: true,
 	})
 
@@ -32,7 +34,9 @@ func TestCreateDirectExchange(t *testing.T) {
 	defer conn.Shutdown()
 
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange("test.direct.exchange", exchange.Direct, exchange.RabbitExchangeOptions{
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{
+		Name:    "test.direct.exchange",
+		Type:    exchange.Direct,
 		Durable: true,
 	})
 
@@ -49,7 +53,9 @@ func TestCreateFanoutExchange(t *testing.T) {
 	defer conn.Shutdown()
 
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange("test.fanout.exchange", exchange.Fanout, exchange.RabbitExchangeOptions{
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{
+		Name:    "test.fanout.exchange",
+		Type:    exchange.Fanout,
 		Durable: true,
 	})
 
@@ -66,7 +72,9 @@ func TestCreateQueueAndBind(t *testing.T) {
 	defer conn.Shutdown()
 
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange("test.exchange.q", exchange.Topic, exchange.RabbitExchangeOptions{
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{
+		Name:    "test.exchange.q",
+		Type:    exchange.Topic,
 		Durable: true,
 	})
 	if err := ex.CreateExchange(ctx, conn); err != nil {
@@ -94,7 +102,9 @@ func TestCreateQuorumQueue(t *testing.T) {
 	defer conn.Shutdown()
 
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange("test.exchange.quorum", exchange.Topic, exchange.RabbitExchangeOptions{
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{
+		Name:    "test.exchange.quorum",
+		Type:    exchange.Topic,
 		Durable: true,
 	})
 	if err := ex.CreateExchange(ctx, conn); err != nil {
@@ -123,7 +133,9 @@ func TestCreateExchangeIdempotent(t *testing.T) {
 	defer conn.Shutdown()
 
 	ctx := context.Background()
-	ex := exchange.NewRabbitExchange("test.idempotent.ex", exchange.Topic, exchange.RabbitExchangeOptions{
+	ex := exchange.NewRabbitExchange(exchange.RabbitExchangeConfig{
+		Name:    "test.idempotent.ex",
+		Type:    exchange.Topic,
 		Durable: true,
 	})
 
