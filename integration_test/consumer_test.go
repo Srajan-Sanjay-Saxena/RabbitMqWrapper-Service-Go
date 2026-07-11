@@ -27,10 +27,9 @@ func TestConsumerReceivesMessages(t *testing.T) {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	cons := consumer.NewConsumer("cons.test.q", 10, handler)
+	cons := consumer.NewConsumer(consumer.ConsumerConfig{QueueName: "cons.test.q", Prefetch: 10, Handler: handler})
 	if err := cons.GetChannel(ctx, conn); err != nil {
 		t.Fatalf("consumer get channel failed: %v", err)
 	}
@@ -40,7 +39,8 @@ func TestConsumerReceivesMessages(t *testing.T) {
 	}
 
 	time.Sleep(1 * time.Second)
-	cons.Stop()
+	cancel()
+	time.Sleep(100 * time.Millisecond)
 
 	if received.Load() != 5 {
 		t.Errorf("expected 5 messages, got %d", received.Load())
@@ -66,17 +66,17 @@ func TestConsumerHandlerErrorNacks(t *testing.T) {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cons := consumer.NewConsumer("nack.q", 1, handler)
+	cons := consumer.NewConsumer(consumer.ConsumerConfig{QueueName: "nack.q", Prefetch: 1, Handler: handler})
 	if err := cons.GetChannel(ctx, conn); err != nil {
 		t.Fatalf("consumer get channel failed: %v", err)
 	}
 
 	cons.Consume(ctx)
 	time.Sleep(2 * time.Second)
-	cons.Stop()
+	cancel()
 
 	if attempts.Load() < 2 {
 		t.Errorf("expected at least 2 attempts (nack+requeue), got %d", attempts.Load())
@@ -100,23 +100,20 @@ func TestConsumerGracefulShutdown(t *testing.T) {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	cons := consumer.NewConsumer("graceful.q", 10, handler)
+	cons := consumer.NewConsumer(consumer.ConsumerConfig{QueueName: "graceful.q", Prefetch: 10, Handler: handler})
 	if err := cons.GetChannel(ctx, conn); err != nil {
 		t.Fatalf("consumer get channel failed: %v", err)
 	}
 
 	cons.Consume(ctx)
 	time.Sleep(100 * time.Millisecond)
-
-	if err := cons.Stop(); err != nil {
-		t.Fatalf("stop failed: %v", err)
-	}
+	cancel()
+	time.Sleep(500 * time.Millisecond) // give time for wg.Wait to complete
 
 	if completed.Load() == 0 {
-		t.Error("expected at least some messages to complete before stop returned")
+		t.Error("expected at least some messages to complete before context cancel returned")
 	}
 }
 
@@ -135,7 +132,7 @@ func TestConsumerContextCancellation(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	cons := consumer.NewConsumer("ctxcancel.q", 10, handler)
+	cons := consumer.NewConsumer(consumer.ConsumerConfig{QueueName: "ctxcancel.q", Prefetch: 10, Handler: handler})
 	if err := cons.GetChannel(ctx, conn); err != nil {
 		t.Fatalf("consumer get channel failed: %v", err)
 	}
@@ -143,10 +140,6 @@ func TestConsumerContextCancellation(t *testing.T) {
 	cons.Consume(ctx)
 	cancel()
 	time.Sleep(100 * time.Millisecond)
-
-	if err := cons.Stop(); err != nil {
-		t.Fatalf("stop after context cancel failed: %v", err)
-	}
 }
 
 func TestConsumerWithPrefetch(t *testing.T) {
@@ -166,17 +159,17 @@ func TestConsumerWithPrefetch(t *testing.T) {
 		return nil
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	ctx, cancel := context.WithCancel(context.Background())
 
-	cons := consumer.NewConsumer("prefetch.q", 5, handler)
+	cons := consumer.NewConsumer(consumer.ConsumerConfig{QueueName: "prefetch.q", Prefetch: 5, Handler: handler})
 	if err := cons.GetChannel(ctx, conn); err != nil {
 		t.Fatalf("consumer get channel failed: %v", err)
 	}
 
 	cons.Consume(ctx)
 	time.Sleep(3 * time.Second)
-	cons.Stop()
+	cancel()
+	time.Sleep(200 * time.Millisecond)
 
 	if received.Load() != 20 {
 		t.Errorf("expected 20 messages processed, got %d", received.Load())
