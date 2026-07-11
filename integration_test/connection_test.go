@@ -65,7 +65,10 @@ func TestConnectionCustomOptions(t *testing.T) {
 		MaxReconnectAttempts: 3,
 	}
 
-	conn := singleConn.NewRabbitMqSingleConnectionHandler(connStr, opts, nil)
+	conn := singleConn.NewRabbitMqSingleConnectionHandler(singleConn.SingleConnectionConfig{
+		ConnString: connStr,
+		Options:    opts,
+	})
 	conn.AddBreaker(breaker.CircuitBreakerOptions{})
 	if err := conn.Connect(context.Background()); err != nil {
 		t.Fatalf("failed to connect with custom opts: %v", err)
