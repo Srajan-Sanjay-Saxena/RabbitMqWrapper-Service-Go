@@ -6,6 +6,7 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/channel"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/logger"
 )
 
 func TestIRabbitConnectionInterface(t *testing.T) {
@@ -17,4 +18,5 @@ type mockConn struct{}
 func (m *mockConn) GetChannel(ctx context.Context, onClose channel.OnChannelClose) (*amqp.Channel, error) {
 	return nil, nil
 }
-func (m *mockConn) Shutdown() error { return nil }
+func (m *mockConn) GetLogger() *logger.Logger { return logger.New(logger.Production) }
+func (m *mockConn) Shutdown() error            { return nil }
