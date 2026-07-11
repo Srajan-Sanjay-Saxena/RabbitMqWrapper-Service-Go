@@ -7,8 +7,8 @@ import (
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/helpers"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/logger"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/helpers"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/logger"
 )
 
 type RabbitMqProducer struct {

@@ -8,12 +8,12 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/breaker"
-	connPool "github.com/Srajan-Sanjay-Saxena/goRabbit-axon/connection/connectionPool"
-	singleConn "github.com/Srajan-Sanjay-Saxena/goRabbit-axon/connection/singleConnection"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/consumer"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/exchange"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/producer"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/breaker"
+	connPool "github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/connection/connectionPool"
+	singleConn "github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/connection/singleConnection"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/consumer"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/exchange"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/producer"
 )
 
 // TestFullSelfHealingLifecycle is a comprehensive test that validates:

@@ -6,8 +6,8 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/exchange"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/producer"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/exchange"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/producer"
 )
 
 func TestProducerPublishWithConfirm(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/logger"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/logger"
 )
 
 type AfterProbeCb func()

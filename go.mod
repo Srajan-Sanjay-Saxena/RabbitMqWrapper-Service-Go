@@ -1,4 +1,4 @@
-module github.com/Srajan-Sanjay-Saxena/goRabbit-axon
+module github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2
 
 go 1.25.0
 

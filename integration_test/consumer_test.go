@@ -8,7 +8,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/consumer"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/consumer"
 )
 
 func TestConsumerReceivesMessages(t *testing.T) {

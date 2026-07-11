@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/channel"
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/logger"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/channel"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/logger"
 )
 
 func TestIRabbitConnectionInterface(t *testing.T) {

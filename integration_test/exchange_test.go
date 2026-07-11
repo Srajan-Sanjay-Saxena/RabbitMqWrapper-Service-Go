@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/exchange"
+	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/exchange"
 )
 
 func TestCreateTopicExchange(t *testing.T) {

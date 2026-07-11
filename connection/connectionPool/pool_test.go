@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	singleConn "github.com/Srajan-Sanjay-Saxena/goRabbit-axon/connection/singleConnection"
+	singleConn "github.com/Srajan-Sanjay-Saxena/goRabbit-axon/v2/connection/singleConnection"
 )
 
 func TestNewConnectionPool(t *testing.T) {
