@@ -13,43 +13,42 @@ import (
 	"github.com/Srajan-Sanjay-Saxena/goRabbit-axon/logger"
 )
 
-type PoolOptions struct {
+type PoolConfig struct {
+	ConnString  string
 	ConnSize    int
 	ChanPerConn int
+	ConnOptions singleConn.ConnectionOptions
+	Logger      *logger.Logger
 }
 
 type RabbitMqConnectionPoolHandler struct {
 	connections    []*singleConn.RabbitMqSingleConnectionHandler
 	chanPool       map[*singleConn.RabbitMqSingleConnectionHandler]chan *amqp.Channel
 	channelHandler *channel.ChannelHandler
-	connString     string
-	options        singleConn.ConnectionOptions
-	poolOpts       PoolOptions
+	config         PoolConfig
 	connIdx        int
 	log            *logger.Logger
 	mu             sync.Mutex
 }
 
-func NewConnectionPool(connString string, poolOpts PoolOptions, connOpts singleConn.ConnectionOptions, log *logger.Logger) *RabbitMqConnectionPoolHandler {
-	if log == nil {
-		log = logger.New(logger.Production)
+func NewConnectionPool(cfg PoolConfig) *RabbitMqConnectionPoolHandler {
+	if cfg.Logger == nil {
+		cfg.Logger = logger.New(logger.Production)
 	}
-	if poolOpts.ConnSize == 0 {
-		poolOpts.ConnSize = 3
+	if cfg.ConnSize == 0 {
+		cfg.ConnSize = 3
 	}
-	if poolOpts.ChanPerConn == 0 {
-		poolOpts.ChanPerConn = 5
+	if cfg.ChanPerConn == 0 {
+		cfg.ChanPerConn = 5
 	}
 
 	p := &RabbitMqConnectionPoolHandler{
-		connString: connString,
-		options:    connOpts,
-		poolOpts:   poolOpts,
-		log:        log,
-		chanPool:   make(map[*singleConn.RabbitMqSingleConnectionHandler]chan *amqp.Channel),
+		config:   cfg,
+		log:      cfg.Logger,
+		chanPool: make(map[*singleConn.RabbitMqSingleConnectionHandler]chan *amqp.Channel),
 	}
 
-	p.channelHandler = channel.NewChannelHandler(log)
+	p.channelHandler = channel.NewChannelHandler(cfg.Logger)
 
 	return p
 }
@@ -58,8 +57,12 @@ func (p *RabbitMqConnectionPoolHandler) Connect(ctx context.Context) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	for i := 0; i < p.poolOpts.ConnSize; i++ {
-		conn := singleConn.NewRabbitMqSingleConnectionHandler(p.connString, p.options, p.log)
+	for i := 0; i < p.config.ConnSize; i++ {
+		conn := singleConn.NewRabbitMqSingleConnectionHandler(singleConn.SingleConnectionConfig{
+			ConnString: p.config.ConnString,
+			Options:    p.config.ConnOptions,
+			Logger:     p.log,
+		})
 		conn.AddBreaker(breaker.CircuitBreakerOptions{})
 		if err := conn.Connect(ctx); err != nil {
 			return err
@@ -67,9 +70,9 @@ func (p *RabbitMqConnectionPoolHandler) Connect(ctx context.Context) error {
 		p.connections = append(p.connections, conn)
 
 		// Pre-warm channel buffer
-		buf := make(chan *amqp.Channel, p.poolOpts.ChanPerConn)
-		for j := 0; j < p.poolOpts.ChanPerConn; j++ {
-			ch, err := p.channelHandler.GetChannel(ctx, conn.Connection , p.replaceDeadChannel)
+		buf := make(chan *amqp.Channel, p.config.ChanPerConn)
+		for j := 0; j < p.config.ChanPerConn; j++ {
+			ch, err := p.channelHandler.GetChannel(ctx, conn.Connection, p.replaceDeadChannel)
 			if err != nil {
 				return err
 			}
@@ -78,7 +81,7 @@ func (p *RabbitMqConnectionPoolHandler) Connect(ctx context.Context) error {
 		p.chanPool[conn] = buf
 	}
 
-	p.log.Info("connection pool initialized", "connections", p.poolOpts.ConnSize, "channelsPerConn", p.poolOpts.ChanPerConn)
+	p.log.Info("connection pool initialized", "connections", p.config.ConnSize, "channelsPerConn", p.config.ChanPerConn)
 	return nil
 }
 
@@ -170,6 +173,10 @@ func (p *RabbitMqConnectionPoolHandler) replaceDeadChannel(conn *amqp.Connection
 		}
 		return
 	}
+}
+
+func (p *RabbitMqConnectionPoolHandler) GetLogger() *logger.Logger {
+	return p.log
 }
 
 func (p *RabbitMqConnectionPoolHandler) Shutdown() error {
