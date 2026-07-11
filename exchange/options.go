@@ -4,7 +4,9 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-type RabbitExchangeOptions struct {
+type RabbitExchangeConfig struct {
+	Name       string
+	Type       ExchangeTopic
 	Durable    bool
 	AutoDelete bool
 	Internal   bool
