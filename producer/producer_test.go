@@ -8,13 +8,13 @@ import (
 )
 
 func TestNewProducer(t *testing.T) {
-	pub := NewProducer("test.exchange", "test.routing.key")
+	pub := NewProducer(ProducerConfig{ExchangeName: "test.exchange", RoutingKey: "test.routing.key"})
 
-	if pub.exchangeName != "test.exchange" {
-		t.Errorf("expected 'test.exchange', got '%s'", pub.exchangeName)
+	if pub.config.ExchangeName != "test.exchange" {
+		t.Errorf("expected 'test.exchange', got '%s'", pub.config.ExchangeName)
 	}
-	if pub.routingKey != "test.routing.key" {
-		t.Errorf("expected 'test.routing.key', got '%s'", pub.routingKey)
+	if pub.config.RoutingKey != "test.routing.key" {
+		t.Errorf("expected 'test.routing.key', got '%s'", pub.config.RoutingKey)
 	}
 	if pub.channel != nil {
 		t.Error("expected nil channel before GetChannel()")
@@ -22,7 +22,7 @@ func TestNewProducer(t *testing.T) {
 }
 
 func TestBuildMessagePersistent(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{
 		Persistent: true,
@@ -34,7 +34,7 @@ func TestBuildMessagePersistent(t *testing.T) {
 }
 
 func TestBuildMessageTransient(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{
 		Persistent: false,
@@ -46,7 +46,7 @@ func TestBuildMessageTransient(t *testing.T) {
 }
 
 func TestBuildMessageDefaultContentType(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{})
 
@@ -56,7 +56,7 @@ func TestBuildMessageDefaultContentType(t *testing.T) {
 }
 
 func TestBuildMessageCustomContentType(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 	ct := "text/plain"
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{
@@ -69,7 +69,7 @@ func TestBuildMessageCustomContentType(t *testing.T) {
 }
 
 func TestBuildMessagePriority(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{
 		Priority: 9,
@@ -81,7 +81,7 @@ func TestBuildMessagePriority(t *testing.T) {
 }
 
 func TestBuildMessageExpiration(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{
 		Expiration: "60000",
@@ -93,7 +93,7 @@ func TestBuildMessageExpiration(t *testing.T) {
 }
 
 func TestBuildMessageHeaders(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	headers := amqp.Table{
 		"x-source":  "cdc",
@@ -113,7 +113,7 @@ func TestBuildMessageHeaders(t *testing.T) {
 }
 
 func TestPublishFailsWithoutChannel(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 
 	err := pub.Publish(context.Background(), []byte("test"), RabbitMqPublisherConfig{})
 	if err == nil {
@@ -124,16 +124,9 @@ func TestPublishFailsWithoutChannel(t *testing.T) {
 	}
 }
 
-func TestIsChannelValidFalseByDefault(t *testing.T) {
-	pub := NewProducer("ex", "rk")
-
-	if pub.IsChannelValid() {
-		t.Error("expected IsChannelValid to be false before GetChannel")
-	}
-}
 
 func TestBuildMessageFullOptions(t *testing.T) {
-	pub := NewProducer("ex", "rk")
+	pub := NewProducer(ProducerConfig{ExchangeName: "ex", RoutingKey: "rk"})
 	ct := "application/xml"
 
 	msg := pub.buildMessage(RabbitMqPublisherConfig{
